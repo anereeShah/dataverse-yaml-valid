@@ -27,6 +27,7 @@ inputPorts:
     tags: []
     syncType: pull
     incrementalLoad: true
+    dataSetUrn: urn:dv:dataset:393c056e-8a0e-4ced-b48d-0af88f9d89ef
     incrementalStrategy:
       frequency:
         - keyReference: sample
