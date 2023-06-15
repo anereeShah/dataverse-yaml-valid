@@ -1,77 +1,170 @@
-version: 1.0.0
-alias: ""
+---
+version: 0.1.0
+alias: Test_kk_maf__001sada
 discoveryPort:
-  name: Test Source Aligned Data Product
-  description: ""
-  category: ""
-  image: ""
-  autofillUserinfo: ""
-  tags: []
-  extra: {}
-  createdBy:
-    name: ""
-    userid: ""
-    email: ""
-  createdTs: ""
-  updatedTs: ""
+  name: Test_kk_maf__001asda
+  alias: Test_kk_maf
+  shortDescription: Weather Forecast of the next 7 days for ahmedabad city
+  longDescription: Weather Forecast of the next 7 days for ahmedabad city along with the accuracy of the previous forecast
+  tags:
+    - MAF Data
+    - Schedule Run
+  dataTimeRange:
+    fromMinDataDate: '2022-04-07'
+    toMinDataDate: '2022-04-14'
+    timeColumn: '2022-04-07'
+  industryDomain: Meteorology
+  function: Forecast
+  regulatoryFields:
+    dataPrivacy: public
+    customerInfo: nonPII
+    dataOrigin: machineGenerated
+    monetaryInfo: nonFinancialData
 inputPorts:
-  - alias: Delimited$1
-    description: MDQ vs Actual SOH
-    tags: []
-    extra: {}
-    syncType: pull
+  - alias: Test_input_port
+    description: string
     type: s3-csv
+    tags: []
+    syncType: pull
     dataSetUrn: urn:dv:dataset:393c056e-8a0e-4ced-b48d-0af88f9d89ef
-    incrementalStrategy: {}
-    filter: ""
-    projection: []
+    incrementalLoad: true
+    incrementalStrategy:
+      frequency:
+        - keyReference: sample
+          mode: range
+          interval: -5
+        - keyReference: multiple
+          mode: range
+          interval: -5
     entity:
-      createEntity: true
-      path: "This is a ##sample## string with ##multiple## values."
+      path: s3://dp-input-bucket/mpay-tx/mpay-tx.csv
       variables:
-        - key: sample
-          value: ""
+        - key: timeStamp
+          value: date-YYYYMMdd
       advanceOptions:
-        delimiter: "|"
+        delimiter: ','
         header: true
 productState:
-  refreshInterval: ""
-  logicalSchemaUrn: ""
-  retentionVersions: ""
-  updateStrategy: ""
-  logicalSchema: ""
-  productStoreState:
-    enforceSchemaMethod: ""
-  updateStrategyOptions:
-    - entityRef: ""
-      uniqueKeyColumns: []
-      changeTrackColumns: []
-      timeTrackColumn: ""
+  refreshInterval: "*/10 * * * *"
+  updateStrategy: append
+  logicalSchema:
+    properties:
+      id:
+        type: number
+      name:
+        type: String
+      marks:
+        type: number
+      modified:
+        type: datetime
 transformation:
-  - alias: Filter$1
-    type: ""
-    description: ""
+  - alias: Test_input_port_trans
+    description: step_1
+    type: SQL
+    sequenceNo: '1'
+    query: SELECT * FROM Test_input_port
+    references:
+      - alias: Test_input_port
+        sqlReference: Test_input_port        
+outputPort:
+  subscriptionChannels:
+    - channelType: JDBC
+      queryType: SQL
 controlPort:
+  contractDetails:
+    contractID : A unique id for contract
+    startDate: starting date and time of the contract
+    endDate: ending date and time for the contract
+    owner: Data Product owner's wallet address
+    consumer: Data Product consumer's wallet address
+    dataProductURN: Data Product ID
+    dataProductTokenID: Data product NFT token id
+    consumptionType: Type of consumption, API, File etc.
+    consumptionLimit: Consumption limit for specified frequency eg, 100 API calls a day
+    consumptionLimitFrequency: Frequency for consumption limit eg. Daily, Weekly, Monthly etc.
   dataQualityCheck:
-    tableId:
-      inputPort:
-        - checks: 2878
-          referenceAlias: Delimited$1
-    enable:
-      inputPort:
-        - checks: true
-          referenceAlias: Delimited$1
-      transformation:
-        - checks: false
-          referenceAlias: Filter$1
     RecordCountCheck:
       inputPort:
-        - checks:
+        - referenceAlias: Test_input_port
+          expression: ">="
+          number: 100
+      productState:
+        referenceAlias: Test_kk_maf__001sada
+        expression: ==
+        number: 100
+    NullValueCheck:
+      inputPort:
+        - referenceAlias: Test_input_port
+          checks:
+            - column: amount
+              expression: ">="
+              number: 9
+            - column: payment_option
+              expression: ">="
+              number: 8
+      productState:
+        referenceAlias: Test_kk_maf__001sada
+        checks:
+          - column: amount
             expression: ">="
-            number: 5
-          referenceAlias: Delimited$1
-      transformation:
-        - checks:
+            number: 0.9
+    NullCombinationCheck:
+      productState:
+        referenceAlias: Test_kk_maf__001sada
+        checks:
+          - columns:
+              - transaction_reference
+              - order_reference
             expression: ">="
-            number: 10
-          referenceAlias: Filter$1
+            number: 0.99
+    UnacceptableTextValueCheck:
+      inputPort:
+        - referenceAlias: Test_input_port
+          checks:
+            - column: payment_option
+              valueList:
+                - VISA
+                - MASTERCARD
+              number: 0.95
+              expression: ">="
+      productState:
+        referenceAlias: Test_kk_maf__001sada
+        checks:
+          - column: payment_option
+            valueList:
+              - MASTERCARD
+              - VISA
+            number: 0.9
+            expression: ">="
+    UniquenessCheck:
+      inputPort:
+        - referenceAlias: Test_input_port
+          checks:
+            - column: store_group_name
+            - column: store_name
+    UniqueCombinationCheck:
+      inputPort:
+        - referenceAlias: Test_input_port
+          checks:
+            - columns:
+                - store_name
+                - transaction_Reference
+      productState:
+        referenceAlias: Test_kk_maf__001sada
+        checks:
+          - columns:
+              - store_name
+              - transaction_Reference
+    DistinctValueCountCheck:
+      inputPort:
+        - referenceAlias: Test_input_port
+          checks:
+            - column: payment_option
+              number: 2
+              expression: "<="
+      productState:
+        referenceAlias: Test_kk_maf__001sada
+        checks:
+          - column: payment_option
+            number: 2
+            expression: "<="
